@@ -7,12 +7,14 @@ const fccTesting = require('./freeCodeCamp/fcctesting.js');
 const app = express();
 
 fccTesting(app); //For FCC testing purposes
+app.set('view engine', 'pug'); // set pug as view engine
+app.set('views', './views/pug') // set the views location of pug
 app.use('/public', express.static(process.cwd() + '/public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.route('/').get((req, res) => {
-
+app.get('/', (req, res) => {
+  res.render('index') // render pug index on '/' GET
 });
 
 const PORT = process.env.PORT || 3000;
