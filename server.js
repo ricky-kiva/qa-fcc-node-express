@@ -24,15 +24,6 @@ app.use(session({
 })) // using express-session
 app.use(passport.initialize()); // use passport
 app.use(passport.session());
-passport.use(new LocalStrategy((username, password, done) => {
-  myDataBase.findOne({ username: username }, (err, user) => {
-    console.log(`User ${username} attempted to log in.`);
-    if (err) return done(err);
-    if (!user) return done(null, false);
-    if (password !== user.password) return done(null, false);
-    return done(null, user);
-  });
-})); // checks username & password by passport-local
 
 myDB(async client => {
   const myDataBase = await client.db('database').collection('users'); // connecting to database after connected to cluster via './connection' (myDB)
@@ -47,6 +38,26 @@ myDB(async client => {
     });
   })
 
+  app.route('/login').post(passport.authenticate('local', {
+    failureRedirect: '/'
+  }), (req, res) {
+    res.redirect('/profile')
+  })
+
+  app.route('/profile').get((req,res) => {
+    res.render('profile')
+  })
+
+  passport.use(new LocalStrategy((username, password, done) => {
+    myDataBase.findOne({ username: username }, (err, user) => {
+      console.log(`User ${username} attempted to log in.`);
+      if (err) return done(err);
+      if (!user) return done(null, false);
+      if (password !== user.password) return done(null, false);
+      return done(null, user);
+    });
+  })); // checks username & password by passport-local
+
   // Serialization and deserialization
   passport.serializeUser((user, done) => {
     done(null, user._id);
@@ -56,15 +67,6 @@ myDB(async client => {
     myDataBase.findOne({_id: new ObjectID(id)}, (err, doc) => {
       done(null, doc); // looking for one new generated class of ObjectID
     })
-  })
-
-  app.post('/login', passport.authenticate('local', {
-    successRedirect: '/profile',
-    failureRedirect: '/'
-  }))
-
-  app.get('/profile', (req,res) => {
-    res.render('profile')
   })
 })
   .catch(e => {
