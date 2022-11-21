@@ -3,7 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const myDB = require('./connection');
 const session = require('express-session');
-const passport = require('passport')
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
 const fccTesting = require('./freeCodeCamp/fcctesting.js');
 const { ObjectID } = require('mongodb')
 
@@ -23,6 +24,15 @@ app.use(session({
 })) // using express-session
 app.use(passport.initialize()); // use passport
 app.use(passport.session());
+passport.use(new LocalStrategy((username, password, done) => {
+  myDataBase.findOne({ username: username }, (err, user) => {
+    console.log(`User ${username} attempted to log in.`);
+    if (err) return done(err);
+    if (!user) return done(null, false);
+    if (password !== user.password) return done(null, false);
+    return done(null, user);
+  });
+})); // checks username & password by passport-local
 
 myDB(async client => {
   const myDataBase = await client.db('database').collection('users'); // connecting to database after connected to cluster via './connection' (myDB)
@@ -32,9 +42,10 @@ myDB(async client => {
     // Change the response to render the Pug template
     res.render('index', {
       title: 'Connected to Database',
-      message: 'Please login'
+      message: 'Please login',
+      showLogin: true
     });
-  });
+  })
 
   // Serialization and deserialization
   passport.serializeUser((user, done) => {
@@ -45,6 +56,15 @@ myDB(async client => {
     myDataBase.findOne({_id: new ObjectID(id)}, (err, doc) => {
       done(null, doc); // looking for one new generated class of ObjectID
     })
+  })
+
+  app.post('/login', passport.authenticate('local', {
+    successRedirect: '/profile',
+    failureRedirect: '/'
+  }))
+
+  app.get('/profile', (req,res) => {
+    res.render('profile')
   })
 })
   .catch(e => {
